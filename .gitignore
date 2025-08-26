@@ -187,5 +187,5 @@ cython_debug/
 .cursorignore
 .cursorindexingignore
 
-.src_dir
-./dest_dir
+src_dir/
+dest_dir/
