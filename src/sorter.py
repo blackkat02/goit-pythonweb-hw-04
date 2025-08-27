@@ -3,6 +3,7 @@ from aiopath import AsyncPath
 import logging
 from typing import Union
 
+
 async def copy_file(source_path: AsyncPath, output_path: AsyncPath) -> None:
     """
     Asynchronously copies a file to a destination folder, creating a subfolder
@@ -43,29 +44,36 @@ async def copy_file(source_path: AsyncPath, output_path: AsyncPath) -> None:
     except Exception as e:
         logging.error(f"Error copying file '{source_path}': {e}")
 
+
 async def read_folder(src_dir: Union[str, AsyncPath], dest_dir: Union[str, AsyncPath]) -> None:
     """
-    Recursively and asynchronously traverses a source folder.
+    Recursively and asynchronously traverses a source folder and copies files.
 
     Args:
         src_dir (Union[str, AsyncPath]): The path to the source directory.
         dest_dir (Union[str, AsyncPath]): The path to the destination directory.
     """
-    async_path_src: AsyncPath = AsyncPath(src_dir)
-    async_path_dest: AsyncPath = AsyncPath(dest_dir)
+    source_path: AsyncPath = AsyncPath(src_dir)
+    dest_path: AsyncPath = AsyncPath(dest_dir)
 
     # Check if the source path exists and is a directory
-    if not await async_path_src.is_dir():
-        logging.error(f"Error: The path '{async_path_src}' does not exist or is not a folder.")
+    if not await source_path.is_dir():
+        logging.error(f"Error: The path '{source_path}' does not exist or is not a folder.")
         return
 
-    print(f"Starting to process folder: {async_path_src}")
+    print(f"Starting to process folder: {source_path}")
 
+    tasks = []
     # Asynchronously iterate over the directory content
-    async for item in async_path_src.iterdir():
-        # Recursively call the function for subdirectories
+    async for item in source_path.iterdir():
+        # Check if the item is a directory
         if await item.is_dir():
-            await read_folder(item, async_path_dest)
+            # Create a recursive task for the subdirectory
+            tasks.append(asyncio.create_task(read_folder(item, dest_path)))
         else:
-            # Call the copy_file function for each file found
-            await copy_file(item, async_path_dest)
+            # Create a task for copying the file
+            tasks.append(asyncio.create_task(copy_file(item, dest_path)))
+
+    # Run all tasks concurrently
+    if tasks:
+        await asyncio.gather(*tasks)
